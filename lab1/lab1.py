@@ -6,11 +6,13 @@ def writeToFile(outFile, result):
     with open(outFile, mode='w', newline='') as file:
         writer = csv.writer(file, delimiter=';')
         writer.writerows(result)
+
 def fillResult(currState, nextState, matrix, result):
-    for t in range(1, len(matrix[0])):
-        if nextState == matrix[0][t]:
-            for s in range(1, len(matrix)):
-                result[s + 1][int(currState)] = matrix[s][t]
+    for i in range(1, len(matrix[0])):
+        if nextState == matrix[0][i]:
+            for j in range(1, len(matrix)):
+                result[j + 1][int(currState)] = matrix[j][i]
+
 def mealyToMoore(inFile, outFile):
     f = open(inFile, 'r')
 
@@ -23,20 +25,19 @@ def mealyToMoore(inFile, outFile):
     stateMatrix = []
 
     for line in f:
-        s = line.split(';')
-        stateMatrix.append([0]*len(s))
+        splited = line.split(';')
+        stateMatrix.append([0]*len(splited))
         if lineCount == 0:
-            for i in s:
-                i = i.strip('\n')
-                i = i.strip('\t')
-                if i != "":
-                    transitions.append(i)
+            for item in splited:
+                item = item.strip('\n').strip('\t')
+                if item != "":
+                    transitions.append(item)
         else:
-            for i in range(len(s)):
+            for i in range(len(splited)):
                 if i == 0:
-                    inStates.append(s[i])
+                    inStates.append(splited[i])
                 else:
-                    a = s[i].split('/')
+                    a = splited[i].split('/')
                     a[1] = a[1].strip('\n').strip('\t')
                     currState = "S" + str(len(outStates.keys()))
                     currString = str(a[0]) + "/" + str(a[1])
@@ -60,8 +61,8 @@ def mealyToMoore(inFile, outFile):
         if i > 1:
             result[i][0] = inStates[i-2]
 
-    for t in range(len(transitions)):
-        stateMatrix[0][t+1] = transitions[t]
+    for i in range(len(transitions)):
+        stateMatrix[0][i+1] = transitions[i]
 
 
     for state in range(1, len(result[1])):
@@ -77,16 +78,16 @@ def mooreToMealy(inFile, outFile):
     matrix = []
 
     for line in f:
-        s = line.split(';')
-        s[-1] = s[-1].strip('\n').strip('\t')
-        matrix.append(s)
+        splited = line.split(';')
+        splited[-1] = splited[-1].strip('\n').strip('\t')
+        matrix.append(splited)
 
     for i in range(2, len(matrix)):
-        for s in range(1, len(matrix[i])):
-            currState = matrix[i][s]
-            t = re.sub('\D','', currState)
-            exit = matrix[0][int(t)+1]
-            matrix[i][s] = currState + "/" + exit
+        for j in range(1, len(matrix[i])):
+            currState = matrix[i][j]
+            stateNum = re.sub('\D','', currState)
+            exit = matrix[0][int(stateNum)+1]
+            matrix[i][j] = currState + "/" + exit
 
     matrix.pop(0)
     writeToFile(outFile, matrix)
