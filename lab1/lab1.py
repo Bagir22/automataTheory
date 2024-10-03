@@ -7,12 +7,6 @@ def writeToFile(outFile, result):
         writer = csv.writer(file, delimiter=';')
         writer.writerows(result)
 
-def fillResult(currState, nextState, matrix, result):
-    for i in range(1, len(matrix[0])):
-        if nextState == matrix[0][i]:
-            for j in range(1, len(matrix)):
-                result[j + 1][int(currState)] = matrix[j][i]
-
 def mealyToMoore(inFile, outFile):
     f = open(inFile, 'r')
 
@@ -59,16 +53,6 @@ def mealyToMoore(inFile, outFile):
             elif len(stateMatrix[i][j]) != 3:
                 stateMatrix[i][j].append(statesDict[curr])
 
-    print("States dict\n")
-    print(statesDict)
-
-    print("States arr\n")
-    print(statesArr)
-
-    print("Matrix\n")
-    for i in range(len(stateMatrix)):
-        print(stateMatrix[i])
-
     result = [["" for _ in range(len(statesDict) + 1)] for _ in range(len(stateMatrix) + 1)]
 
     for i in range(1, len(stateMatrix)):
@@ -78,18 +62,11 @@ def mealyToMoore(inFile, outFile):
         result[0][i+1] = list(statesDict)[i][1]
         result[1][i + 1] = list(statesDict.values())[i]
 
-
-
     for i in range(len(list(statesDict.values()))):
         j, state = list(statesDict.keys())[i][0], list(statesDict.values())[i]
         col = stateMatrix[0].index(j)
         for j in range(1, len(stateMatrix)):
-            print(i, j, col, state)
             result[j+1][i+1] = stateMatrix[j][col][2]
-
-    print("Result\n")
-    for i in range(len(result)):
-        print(result[i])
 
     writeToFile(outFile, result)
 
