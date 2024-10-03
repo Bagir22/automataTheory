@@ -16,59 +16,80 @@ def fillResult(currState, nextState, matrix, result):
 def mealyToMoore(inFile, outFile):
     f = open(inFile, 'r')
 
-    transitions = []
-    inStates = []
-    outStates = {}
     lineCount = 0
-    statesSet = set()
-    transitionsState = {}
     stateMatrix = []
+    statesArr = []
+    statesCount = 0
+    statesDict = {}
 
     for line in f:
         splited = line.split(';')
         stateMatrix.append([0]*len(splited))
-        if lineCount == 0:
-            for item in splited:
-                item = item.strip('\n').strip('\t')
-                if item != "":
-                    transitions.append(item)
-        else:
-            for i in range(len(splited)):
-                if i == 0:
-                    inStates.append(splited[i])
-                else:
-                    a = splited[i].split('/')
-                    a[1] = a[1].strip('\n').strip('\t')
-                    currState = "S" + str(len(outStates.keys()))
-                    currString = str(a[0]) + "/" + str(a[1])
-                    if currString not in statesSet:
-                        stateMatrix[lineCount][i] = currState
-                        statesSet.add(currString)
-                        transitionsState[currString] = currState
-                        outStates[currState] = [a[1], a[0]]
-                    else:
-                        currState = transitionsState[currString]
-                        stateMatrix[lineCount][i] = currState
+        for i in range(len(splited)):
+            item = splited[i].strip('\n').strip('\t')
+            if lineCount == 0 or (i == 0 and lineCount != 0):
+                stateMatrix[lineCount][i] = item
+            else:
+                a = splited[i].split('/')
+                a[1] = a[1].strip('\n').strip('\t')
+                curr = [a[0], a[1]]
+                stateMatrix[lineCount][i] = curr
+                if a[0] == stateMatrix[0][1] and [a[0], a[1]] not in statesArr:
+                    statesArr.append(curr)
+                elif curr in statesArr:
+                    stateMatrix[lineCount][i] = statesArr[statesArr.index(curr)]
         lineCount += 1
 
-    result = [["" for _ in range(len(outStates) + 1)] for _ in range(len(inStates) + 2)]
-
-    for i in range(len(outStates.items())):
-        result[0][i+1] = list(outStates.items())[i][1][0]
-        result[1][i+1] = list(outStates.items())[i][0]
-
-    for i in range(len(inStates) + 2):
-        if i > 1:
-            result[i][0] = inStates[i-2]
-
-    for i in range(len(transitions)):
-        stateMatrix[0][i+1] = transitions[i]
+    statesArr = sorted(statesArr, key=lambda x: (x[0], x[1]))
+    for i in range(len(statesArr)):
+        curr = statesArr[i].copy()
+        statesArr[i].append("S" + str(statesCount))
+        statesDict[tuple(curr)] = "S" + str(statesCount)
+        statesCount += 1
 
 
-    for state in range(1, len(result[1])):
-        currState = result[1][state]
-        nextState = outStates[currState][1]
-        fillResult(state, nextState, stateMatrix, result)
+    for i in range(1, len(stateMatrix)):
+        for j in range(1, len(stateMatrix[i])):
+            curr = tuple(stateMatrix[i][j][:2])
+            if curr not in statesDict.keys():
+                currState = "S" + str(statesCount)
+                statesDict[curr] = currState
+                stateMatrix[i][j].append(currState)
+                statesCount += 1
+            elif len(stateMatrix[i][j]) != 3:
+                stateMatrix[i][j].append(statesDict[curr])
+
+    print("States dict\n")
+    print(statesDict)
+
+    print("States arr\n")
+    print(statesArr)
+
+    print("Matrix\n")
+    for i in range(len(stateMatrix)):
+        print(stateMatrix[i])
+
+    result = [["" for _ in range(len(statesDict) + 1)] for _ in range(len(stateMatrix) + 1)]
+
+    for i in range(1, len(stateMatrix)):
+        result[i+1][0] = stateMatrix[i][0]
+
+    for i in range(len(list(statesDict))):
+        result[0][i+1] = list(statesDict)[i][1]
+        result[1][i + 1] = list(statesDict.values())[i]
+
+
+
+    for i in range(len(list(statesDict.values()))):
+        j, state = list(statesDict.keys())[i][0], list(statesDict.values())[i]
+        col = stateMatrix[0].index(j)
+        for j in range(1, len(stateMatrix)):
+            print(i, j, col, state)
+            result[j+1][i+1] = stateMatrix[j][col][2]
+
+    print("Result\n")
+    for i in range(len(result)):
+        print(result[i])
 
     writeToFile(outFile, result)
 
