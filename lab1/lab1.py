@@ -7,6 +7,18 @@ def writeToFile(outFile, result):
         writer = csv.writer(file, delimiter=';')
         writer.writerows(result)
 
+def findAndAddState(stateMatrix, curr, statesArr, statesDict, statesCount):
+    found = False
+    for j in range(1, len(stateMatrix)):
+        for k in range(1, len(stateMatrix[j])):
+            if curr == stateMatrix[j][k][0]:
+                statesArr.append([stateMatrix[j][k][0], stateMatrix[j][k][1], "S" + str(statesCount)])
+                c = statesArr[-1][:2].copy()
+                statesDict[tuple(c)] = "S" + str(statesCount)
+                statesCount += 1
+                found = True
+    return statesArr, statesDict, statesCount, found
+
 def mealyToMoore(inFile, outFile):
     f = open(inFile, 'r')
 
@@ -42,14 +54,7 @@ def mealyToMoore(inFile, outFile):
         for i in range(1, len(stateMatrix[0])):
             curr = stateMatrix[0][i]
             if not found:
-                for j in range(1, len(stateMatrix)):
-                    for k in range(1, len(stateMatrix[j])):
-                        if curr == stateMatrix[j][k][0]:
-                            statesArr.append([stateMatrix[j][k][0], stateMatrix[j][k][1], "S" + str(statesCount)])
-                            c = statesArr[-1][:2].copy()
-                            statesDict[tuple(c)] = "S" + str(statesCount)
-                            statesCount += 1
-                            found = True
+                statesArr, statesDict, statesCount, found = findAndAddState(stateMatrix, curr, statesArr, statesDict, statesCount)
     else:
         statesArr = sorted(statesArr, key=lambda x: (x[0], x[1]))
         for i in range(len(statesArr)):
