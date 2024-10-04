@@ -34,12 +34,29 @@ def mealyToMoore(inFile, outFile):
                     stateMatrix[lineCount][i] = statesArr[statesArr.index(curr)]
         lineCount += 1
 
-    statesArr = sorted(statesArr, key=lambda x: (x[0], x[1]))
-    for i in range(len(statesArr)):
-        curr = statesArr[i].copy()
-        statesArr[i].append("S" + str(statesCount))
-        statesDict[tuple(curr)] = "S" + str(statesCount)
+    if len(statesArr) == 0:
+        statesArr.append(["-", "S" + str(statesCount)])
+        statesDict["-"] = "S" + str(statesCount)
         statesCount += 1
+        found = False
+        for i in range(1, len(stateMatrix[0])):
+            curr = stateMatrix[0][i]
+            if not found:
+                for j in range(1, len(stateMatrix)):
+                    for k in range(1, len(stateMatrix[j])):
+                        if curr == stateMatrix[j][k][0]:
+                            statesArr.append([stateMatrix[j][k][0], stateMatrix[j][k][1], "S" + str(statesCount)])
+                            c = statesArr[-1][:2].copy()
+                            statesDict[tuple(c)] = "S" + str(statesCount)
+                            statesCount += 1
+                            found = True
+    else:
+        statesArr = sorted(statesArr, key=lambda x: (x[0], x[1]))
+        for i in range(len(statesArr)):
+            curr = statesArr[i].copy()
+            statesArr[i].append("S" + str(statesCount))
+            statesDict[tuple(curr)] = "S" + str(statesCount)
+            statesCount += 1
 
 
     for i in range(1, len(stateMatrix)):
@@ -55,18 +72,23 @@ def mealyToMoore(inFile, outFile):
 
     result = [["" for _ in range(len(statesDict) + 1)] for _ in range(len(stateMatrix) + 1)]
 
+
     for i in range(1, len(stateMatrix)):
         result[i+1][0] = stateMatrix[i][0]
 
     for i in range(len(list(statesDict))):
-        result[0][i+1] = list(statesDict)[i][1]
+        result[0][i + 1] = list(statesDict)[i][-1]
         result[1][i + 1] = list(statesDict.values())[i]
 
     for i in range(len(list(statesDict.values()))):
         j, state = list(statesDict.keys())[i][0], list(statesDict.values())[i]
-        col = stateMatrix[0].index(j)
-        for j in range(1, len(stateMatrix)):
-            result[j+1][i+1] = stateMatrix[j][col][2]
+        if j != "-":
+            col = stateMatrix[0].index(j)
+            for j in range(1, len(stateMatrix)):
+                result[j+1][i+1] = stateMatrix[j][col][2]
+        if j == "-":
+            for j in range(1, len(stateMatrix)):
+                result[j + 1][1] = stateMatrix[j][1][2]
 
     writeToFile(outFile, result)
 
