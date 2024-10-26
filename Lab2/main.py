@@ -44,6 +44,11 @@ def getOriginalMealy(infile):
 
         lineCount += 1
 
+    print("Original")
+    for i in range(len(original)):
+        print(original[i])
+    print()
+
     return original
 
 def getStatesForMealy(min):
@@ -70,6 +75,11 @@ def getStatesForMealy(min):
                     min[0][j] = "A" + str(currState)
                     d[tuple(curr)] = "A" + str(currState)
                     currState += 1
+
+    print("StatesForMealy")
+    for i in range(len(min)):
+        print(min[i])
+    print()
 
     return
 
@@ -103,16 +113,21 @@ def removeUnreachebleMealy(arr):
         else:
             i += 1
 
+    print("remove unreachble")
     for i in range(len(arr)):
         print(arr[i])
+    print()
 
     return
+
+
 def minimizeMealy(original, arr):
     start = set()
     end = set()
 
     for i in range(1, len(arr[0])):
         start.add(arr[0][i])
+
 
     for i in range(1, len(original[0])):
         for j in range(1, len(original)):
@@ -125,6 +140,8 @@ def minimizeMealy(original, arr):
         for i in range(1, len(arr[0])):
             start.add(arr[0][i])
 
+        grouped = {arr[1][i]: arr[0][i] for i in range(1, len(arr[0]))}
+
         currNum = 0
         currCh = re.sub(r'[^a-zA-Z]', '', arr[0][1])
         nextCh = chr(ord(currCh) + 1)
@@ -134,24 +151,32 @@ def minimizeMealy(original, arr):
                 id = arr[1].index(original[j][i][0])
                 arr[j + 1][i] = arr[0][id]
 
-        s = dict()
+        s = {}
         for j in range(1, len(arr[0])):
             curr = []
-            for i in range(2, len(arr) - 1):
-                curr.append(arr[i][j])
 
-            a = s.get(tuple(curr))
-            if a != None:
-                arr[-1][j] = s[tuple(curr)]
+            for i in range(2, len(arr) - 1):
+                curr.append((arr[i][j], grouped.get(arr[1][j], '')))
+
+
+            curr_tuple = tuple(curr)
+            if curr_tuple in s:
+                arr[-1][j] = s[curr_tuple]
             else:
-                arr[-1][j] = nextCh + str(currNum)
-                s[tuple(curr)] = nextCh + str(currNum)
-                end.add(nextCh + str(currNum))
+                arr[-1][j] = f"{nextCh}{currNum}"
+                s[curr_tuple] = arr[-1][j]
+                end.add(arr[-1][j])
                 currNum += 1
 
-        arr[0] = arr[-1]
+        arr[0] = arr[-1][:]
+
+    print("Minimize")
+    for i in range(len(arr)):
+        print(arr[i])
+    print()
 
     return
+
 
 def groupMealy(original, arr):
     states = []
