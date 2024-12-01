@@ -7,6 +7,7 @@ rightRegex = r'^\s*<(\w+)>\s*->\s*([\wε](?:\s+<\w+>)?(?:\s*\|\s*[\wε](?:\s+<\w
 findNonTerminal = r'<(.*?)>'
 findTerminal = r'\b(?!<)(\w+)(?!>)\b'
 
+inStates = set()
 def WriteToFile(outFile, result):
     with open(outFile, mode='w', newline='') as file:
         writer = csv.writer(file, delimiter=';')
@@ -59,6 +60,12 @@ def GetRules(inFile):
             else:
                 rules[leftSide] = productions
 
+    for v in rules.values():
+        for i in v:
+            if '<' in i and '>' in i:
+                state = f'<{re.search(findNonTerminal, i).group(1)}>'
+                inStates.add(state)
+
     return rules
 
 def GetTerminals(rules):
@@ -110,7 +117,6 @@ def ToStates(rules, statesMap, type):
     print("terminals\n", terminals)
     for rule in rules.items():
         currState = statesMap[rule[0]]
-        print(rule[0], currState)
         for i in range(1, len(rule)):
             if type == "left":
                 for val in rule[i]:
@@ -124,12 +130,21 @@ def ToStates(rules, statesMap, type):
                             result[columnIdx + 2][ruleIdx] += f',{result[1][valState]}'
                     else:
                         if len(rules) != 1:
-                            ruleIdx = result[1].index(statesMap[f'<{re.search(findNonTerminal, rule[0]).group(1)}>'])
-                            lineIdx = terminals.index(val)
-                            if result[lineIdx + 2][ruleIdx] == "":
-                                result[lineIdx + 2][ruleIdx] = currState
+                            if rule[0] not in inStates:
+                                currState = 'q0'
+                                ruleIdx = result[1].index(currState)
+                                lineIdx = terminals.index(val)
+                                if result[lineIdx + 2][ruleIdx] == "":
+                                    result[lineIdx + 2][ruleIdx] = result[1][-1]
+                                else:
+                                    result[lineIdx + 2][ruleIdx] += f',{result[1][-1]}'
                             else:
-                                result[lineIdx + 2][ruleIdx] += f',{currState}'
+                                ruleIdx = result[1].index(statesMap[f'<{re.search(findNonTerminal, rule[0]).group(1)}>'])
+                                lineIdx = terminals.index(val)
+                                if result[lineIdx + 2][ruleIdx] == "":
+                                    result[lineIdx + 2][ruleIdx] = currState
+                                else:
+                                    result[lineIdx + 2][ruleIdx] += f',{currState}'
                         else:
                             lineIdx = terminals.index(val)
                             if result[lineIdx + 2][1] == "":
@@ -180,20 +195,13 @@ def GrammarToNKA(inFile, outFile):
 
     rules = GetRules(inFile)
     print("Rules")
-    for i in rules:
-        print(rules[i])
-    print()
+    print(rules)
     statesMap = FillStateMapping(rules, type)
     print("States map")
     print(statesMap)
-    for i in statesMap:
-        print(statesMap[i])
-    print()
     states = ToStates(rules, statesMap, type)
     print("States")
-    for i in states:
-        print(i)
-    print()
+    print(states)
     WriteToFile(outFile, states)
 
 if __name__ == '__main__':
