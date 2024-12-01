@@ -110,7 +110,7 @@ def ToStates(rules, statesMap, type):
     print("terminals\n", terminals)
     for rule in rules.items():
         currState = statesMap[rule[0]]
-        # print(rule[0])
+        print(rule[0], currState)
         for i in range(1, len(rule)):
             if type == "left":
                 for val in rule[i]:
@@ -123,12 +123,19 @@ def ToStates(rules, statesMap, type):
                         else:
                             result[columnIdx + 2][ruleIdx] += f',{result[1][valState]}'
                     else:
-                        ruleIdx = result[1].index(statesMap[f'<{re.search(findNonTerminal, rule[0]).group(1)}>'])
-                        lineIdx = terminals.index(val)
-                        if result[lineIdx + 2][ruleIdx] == "":
-                            result[lineIdx + 2][ruleIdx] = currState
+                        if len(rules) != 1:
+                            ruleIdx = result[1].index(statesMap[f'<{re.search(findNonTerminal, rule[0]).group(1)}>'])
+                            lineIdx = terminals.index(val)
+                            if result[lineIdx + 2][ruleIdx] == "":
+                                result[lineIdx + 2][ruleIdx] = currState
+                            else:
+                                result[lineIdx + 2][ruleIdx] += f',{currState}'
                         else:
-                            result[lineIdx + 2][ruleIdx] += f',{currState}'
+                            lineIdx = terminals.index(val)
+                            if result[lineIdx + 2][1] == "":
+                                result[lineIdx + 2][1] = currState
+                            else:
+                                result[lineIdx + 2][1] += f',{currState}'
 
                 '''
                 for val in rule[i]:
