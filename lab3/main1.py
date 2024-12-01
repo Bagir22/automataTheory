@@ -7,7 +7,6 @@ rightRegex = r'^\s*<(\w+)>\s*->\s*([\wε](?:\s+<\w+>)?(?:\s*\|\s*[\wε](?:\s+<\w
 findNonTerminal = r'<(.*?)>'
 findTerminal = r'\b(?!<)(\w+)(?!>)\b'
 
-inStates = set()
 def WriteToFile(outFile, result):
     with open(outFile, mode='w', newline='') as file:
         writer = csv.writer(file, delimiter=';')
@@ -192,17 +191,6 @@ def GrammarToNKA(inFile, outFile):
     type = GetType(inFile)
     if not type:
         return
-
-    rules = GetRules(inFile)
-    print("Rules")
-    print(rules)
-    statesMap = FillStateMapping(rules, type)
-    print("States map")
-    print(statesMap)
-    states = ToStates(rules, statesMap, type)
-    print("States")
-    print(states)
-    WriteToFile(outFile, states)
 
 if __name__ == '__main__':
     inFile = sys.argv[1]
