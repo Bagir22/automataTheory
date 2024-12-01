@@ -107,11 +107,29 @@ def ToStates(rules, statesMap, type):
     for i in range(1, len(result[1])):
         result[1][i] = list(statesMap.values())[i-1]
 
-
+    print("terminals\n", terminals)
     for rule in rules.items():
         currState = statesMap[rule[0]]
+        # print(rule[0])
         for i in range(1, len(rule)):
             if type == "left":
+                for val in rule[i]:
+                    if '<' in val and '>' in val:
+                        ruleIdx = result[1].index(statesMap[f'<{re.search(findNonTerminal, rule[0]).group(1)}>'])
+                        columnIdx = terminals.index(re.search(findTerminal, val).group(1))
+                        valState = result[1].index(statesMap[f'<{re.search(findNonTerminal, val).group(1)}>'])
+                        if result[columnIdx + 2][ruleIdx] == "":
+                            result[columnIdx + 2][ruleIdx] = result[1][valState]
+                        else:
+                            result[columnIdx + 2][ruleIdx] += f',{result[1][valState]}'
+                    else:
+                        lineIdx = terminals.index(val)
+                        if result[lineIdx + 2][1] == "":
+                            result[lineIdx + 2][1] = currState
+                        else:
+                            result[lineIdx + 2][1] += f',{currState}'
+
+                '''
                 for val in rule[i]:
                     if '<' in val and '>' in val:
                         ruleIdx = result[1].index(statesMap[f'<{re.search(findNonTerminal, val).group(1)}>'])
@@ -126,6 +144,8 @@ def ToStates(rules, statesMap, type):
                             result[lineIdx + 2][1] = currState
                         else:
                             result[lineIdx + 2][1] += f',{currState}'
+                
+                '''
             elif type == "right":
                 for val in rule[i]:
                     currRule = result[1].index(currState)
@@ -143,7 +163,6 @@ def ToStates(rules, statesMap, type):
                             result[currLine+2][currRule] = statesMap["F"]
                         else:
                             result[currLine+2][currRule] += f',{statesMap["F"]}'
-
     return result
 
 def GrammarToNKA(inFile, outFile):
@@ -152,8 +171,21 @@ def GrammarToNKA(inFile, outFile):
         return
 
     rules = GetRules(inFile)
+    print("Rules")
+    for i in rules:
+        print(rules[i])
+    print()
     statesMap = FillStateMapping(rules, type)
+    print("States map")
+    print(statesMap)
+    for i in statesMap:
+        print(statesMap[i])
+    print()
     states = ToStates(rules, statesMap, type)
+    print("States")
+    for i in states:
+        print(i)
+    print()
     WriteToFile(outFile, states)
 
 if __name__ == '__main__':
