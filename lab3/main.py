@@ -164,7 +164,7 @@ def GrammarToNKA(inFile, outFile):
     for i in states:
         print(i)
 
-    #WriteToFile(outFile, states)
+    WriteToFile(outFile, states)
 
 
 if __name__ == '__main__':
