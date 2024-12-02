@@ -2,8 +2,9 @@ import re
 import sys
 import csv
 
-leftRegrex = r'^\s*<(\w+)>\s*->\s*((?:<\w+>\s+)?[\wε](?:\s*\|\s*(?:<\w+>\s+)?[\wε])*)\s*$'
+leftRegex = r'^\s*<(\w+)>\s*->\s*((?:<\w+>\s+)?[\wε](?:\s*\|\s*(?:<\w+>\s+)?[\wε])*)\s*$'
 rightRegex = r'^\s*<(\w+)>\s*->\s*([\wε](?:\s+<\w+>)?(?:\s*\|\s*[\wε](?:\s+<\w+>)?)*)\s*$'
+
 findNonTerminal = r'<(.*?)>'
 findTerminal = r'\b(?!<)(\w+)(?!>)\b'
 
@@ -12,22 +13,27 @@ def WriteToFile(outFile, result):
         writer = csv.writer(file, delimiter=';')
         writer.writerows(result)
 
+
 def GetType(inFile):
+    leftCount = 0
+    rightCount = 0
     with open(inFile, 'r', encoding='utf-8') as file:
         for line in file:
             line = line.strip()
             if not line:
                 continue
-            if re.match(leftRegrex, line):
-                return 'left'
-            elif re.match(rightRegex, line):
-                return 'right'
+            if re.match(leftRegex, line):
+                leftCount += 1
+            if re.match(rightRegex, line):
+                rightCount += 1
 
-    return None
+    if leftCount > rightCount:
+        return 'left'
+
+    return 'right'
 
 def GetRules(inFile):
     rules = {}
-    nextStatesSet = set()
     lastRule = ""
 
     with open(inFile, 'r', encoding='utf-8') as file:
@@ -59,13 +65,7 @@ def GetRules(inFile):
             else:
                 rules[leftSide] = productions
 
-    for rule in rules.values():
-        for next in rule:
-            if '<' in next and '>' in next:
-                state = f'<{re.search(findNonTerminal, next).group(1)}>'
-                nextStatesSet.add(state)
-
-    return rules, next
+    return rules
 
 def GetTerminals(rules):
     terminals = []
@@ -79,7 +79,7 @@ def GetTerminals(rules):
 
     return terminals
 
-def FillStateMapping(rules, type):
+def GetStateMapping(rules, type):
     rulesStatesMap = dict()
 
     if type == 'left':
@@ -101,33 +101,53 @@ def FillStateMapping(rules, type):
 
     return rulesStatesMap
 
-def ToStates(rules, statesMap, type, inStates):
+def ToStates(rules, type):
     terminals = sorted(GetTerminals(rules))
+    statesMap = GetStateMapping(rules, type)
+
+    print(terminals)
+    print(statesMap)
 
     result = [["" for _ in range(len(rules) + 2)] for _ in range(len(terminals) + 2)]
 
     for i in range(2, len(result)):
-        result[i][0] = terminals[i-2]
+        result[i][0] = terminals[i - 2]
 
-    result[0][len(result[0])-1] = "F"
+    result[0][len(result[0]) - 1] = "F"
     for i in range(1, len(result[1])):
-        result[1][i] = list(statesMap.values())[i-1]
+        result[1][i] = list(statesMap.values())[i - 1]
+
 
     for rule in rules.items():
         currState = rule[0]
-        currStateIdx = result[1].index(statesMap[f'<{re.search(findNonTerminal, currState).group(1)}>'])
-        for n in rule[1]:
-            nextState = ''
-            if '<' in n and '>' in n:
-                nextState = statesMap[f'<{re.search(findNonTerminal, n).group(1)}>']
-            else:
-                nextState = 'q0'
+        for i in range(1, len(rule)):
+            for val in rule[i]:
+                if type == "right":
+                    if '<' in val and '>' in val:
+                        nextState = statesMap[f'<{re.search(findNonTerminal, val).group(1)}>']
+                    else:
+                        nextState = result[1][result[0].index('F')]
+                    terminalIdx = terminals.index(re.search(findTerminal, val).group(1))
 
-            terminalIdx = terminals.index(re.search(findTerminal, n).group(1))
-
-
-            result[terminalIdx+2][currStateIdx] = nextState
-
+                    if result[terminalIdx+2][result[1].index(statesMap[f'<{re.search(findNonTerminal, currState).group(1)}>'])] == "":
+                        result[terminalIdx+2][result[1].index(statesMap[f'<{re.search(findNonTerminal, currState).group(1)}>'])] = nextState
+                    else:
+                        nextState = result[1][result[1].index(nextState)]
+                        result[terminalIdx+2][result[1].index(statesMap[f'<{re.search(findNonTerminal, currState).group(1)}>'])] += f',{nextState}'
+                else:
+                    if '<' in val and '>' in val:
+                        nextState = result[1].index(statesMap[f'<{re.search(findNonTerminal, val).group(1)}>'])
+                        terminalIdx = terminals.index(re.search(findTerminal, val).group(1))
+                        if result[terminalIdx + 2][nextState] == "":
+                            result[terminalIdx + 2][nextState] = statesMap[currState]
+                        else:
+                            result[terminalIdx + 2][nextState] += f',{statesMap[currState]}'
+                    else:
+                        terminalIdx = terminals.index(val)
+                        if result[terminalIdx + 2][1] == "":
+                            result[terminalIdx + 2][1] = statesMap[currState]
+                        else:
+                            result[terminalIdx + 2][1] += f',{statesMap[currState]}'
 
     return result
 
@@ -135,17 +155,17 @@ def GrammarToNKA(inFile, outFile):
     type = GetType(inFile)
     if not type:
         return
+    print(type)
 
-    rules, nextStates = GetRules(inFile)
-    states = FillStateMapping(rules, type)
-
-    result = ToStates(rules, states, type, nextStates)
-
+    rules = GetRules(inFile)
     print(rules)
-    print(nextStates)
-    print(states)
+    states = ToStates(rules, type)
+    print("States")
+    for i in states:
+        print(i)
 
-    WriteToFile(outFile, result)
+    #WriteToFile(outFile, states)
+
 
 if __name__ == '__main__':
     inFile = sys.argv[1]
