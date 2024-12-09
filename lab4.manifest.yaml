@@ -1,0 +1,3 @@
+dispatcher: python3.13
+script: Lab4/main.py
+requirementsFile: requirements.txt
