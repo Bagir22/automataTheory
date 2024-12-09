@@ -1,7 +1,5 @@
-import re
 import sys
 import csv
-from collections import deque
 
 def WriteToFile(outFile, result):
     with open(outFile, mode='w', newline='') as file:
@@ -89,7 +87,7 @@ def MakeDFA(original, states, terminals, transitions):
             result[i][0] = t
         i += 1
 
-    for i, (stateSet, dfaState) in enumerate(statesMap.items(), start=1):
+    for i, (stateSet, dfaState) in enumerate(list(statesMap.items()), start=1):
         for j, terminal in enumerate(terminals, start=2):
             if terminal == 'ε':
                 continue
