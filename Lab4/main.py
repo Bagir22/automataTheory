@@ -113,6 +113,10 @@ def MakeDFA(original, states, terminals, transitions):
 
     result = [['' for _ in range(len(dfaTransitions) + 1)] for _ in range(len(dfaTerminals) + 2)]
 
+    print(dfaTerminals)
+    print(dfaStates)
+    print(dfaTransitions)
+
     for i in range(len(dfaTerminals)):
         result[i+2][0] = dfaTerminals[i]
 
@@ -123,6 +127,8 @@ def MakeDFA(original, states, terminals, transitions):
                 stateIdx = original[1].index(state)
                 if original[0][stateIdx] == 'F':
                     finalStates[v] = "F"
+            else:
+                result[1].append(state)
 
     for i, v in enumerate(dfaTransitions.items()):
         result[1][i+1] = v[0]
