@@ -97,10 +97,10 @@ def MakeDFA(original, states, terminals, transitions):
         for terminal in dfaTerminals:
             transitionsSet = set()
             for prev in current:
-                if terminal in transitions[prev]:
-                    next_states = transitions[prev][terminal]
-                    for next_state in next_states:
-                        transitionsSet.update(eTransitions(next_state, transitions))
+                state_transitions = transitions.get(prev, {})
+                if terminal in state_transitions:
+                    for nextState in state_transitions[terminal]:
+                        transitionsSet.update(eTransitions(nextState, transitions))
 
             if transitionsSet:
                 if frozenset(transitionsSet) not in dfaStates:
@@ -119,9 +119,10 @@ def MakeDFA(original, states, terminals, transitions):
     finalStates = dict()
     for k, v in dfaStates.items():
         for state in set(k):
-            stateIdx = original[1].index(state)
-            if original[0][stateIdx] == 'F':
-                finalStates[v] = "F"
+            if state in original[1]:
+                stateIdx = original[1].index(state)
+                if original[0][stateIdx] == 'F':
+                    finalStates[v] = "F"
 
     for i, v in enumerate(dfaTransitions.items()):
         result[1][i+1] = v[0]
