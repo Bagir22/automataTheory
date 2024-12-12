@@ -86,7 +86,7 @@ def MakeDFA(original, states, terminals, transitions):
     dfaStates = dict()
     dfaTransitions = defaultdict(dict)
     if e:
-        dfaStates[frozenset(e)] = f"S{count}"
+        dfaStates[frozenset(e)] = f"A{count}"
         count += 1
         queue.appendleft(frozenset(e))
 
@@ -104,7 +104,7 @@ def MakeDFA(original, states, terminals, transitions):
 
             if transitionsSet:
                 if frozenset(transitionsSet) not in dfaStates:
-                    newState = f"S{count}"
+                    newState = f"A{count}"
                     dfaStates[frozenset(transitionsSet)] = newState
                     queue.append(transitionsSet)
                     count += 1
