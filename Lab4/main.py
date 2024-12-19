@@ -57,21 +57,18 @@ def ReadNFA(original):
 
 
 def eTransitions(state, transitions):
-    eTransitions = [state]
-
-    queue = []
-    queue.append(state)
+    eTransitions = set()
+    queue = deque([state])
 
     while queue:
-        current = queue[0]
-        queue = queue[1:]
+        current = queue.popleft()
+        eTransitions.add(current)
         if 'ε' in transitions.get(current, {}):
             for next_state in transitions[current]['ε']:
                 if next_state not in eTransitions:
                     queue.append(next_state)
-                    eTransitions.append(next_state)
 
-    return eTransitions
+    return list(eTransitions)
 
 def MakeDFA(original, states, terminals, transitions):
     dfaTerminals = []
@@ -80,13 +77,14 @@ def MakeDFA(original, states, terminals, transitions):
             dfaTerminals.append(t)
 
     e = eTransitions(original[1][1], transitions)
+    print("e Transitions", e)
 
     count = 0
     queue = deque()
     dfaStates = dict()
     dfaTransitions = defaultdict(dict)
     if e:
-        dfaStates[frozenset(e)] = f"A{count}"
+        dfaStates[frozenset(e)] = f"S{count}"
         count += 1
         queue.appendleft(frozenset(e))
 
@@ -104,9 +102,9 @@ def MakeDFA(original, states, terminals, transitions):
 
             if transitionsSet:
                 if frozenset(transitionsSet) not in dfaStates:
-                    newState = f"A{count}"
+                    newState = f"S{count}"
                     dfaStates[frozenset(transitionsSet)] = newState
-                    queue.append(transitionsSet)
+                    queue.appendleft(transitionsSet)
                     count += 1
 
                 dfaTransitions[currentState][terminal] = dfaStates[frozenset(transitionsSet)]
@@ -153,7 +151,9 @@ if __name__ == '__main__':
 
     original = GetOriginalMealy(inFile)
     states, terminals, transitions = ReadNFA(original)
-
+    print("States\n", states)
+    print("Terminals\n",terminals)
+    print("Transitions\n", transitions)
     result = MakeDFA(original, states, terminals, transitions)
 
     for i in result:
