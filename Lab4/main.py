@@ -71,22 +71,13 @@ def eTransitions(state, transitions):
     return list(eTransitions)
 
 def MakeDFA(original, states, terminals, transitions):
-    dfaTerminals = []
-    for t in terminals:
-        if t != 'ε':
-            dfaTerminals.append(t)
+    dfaTerminals = [t for t in terminals if t != 'ε']
 
-    e = eTransitions(original[1][1], transitions)
-    print("e Transitions", e)
-
-    count = 0
-    queue = deque()
-    dfaStates = dict()
+    start_closure = eTransitions(states[0], transitions)
+    queue = deque([frozenset(start_closure)])
+    dfaStates = {frozenset(start_closure): f"S0"}
     dfaTransitions = defaultdict(dict)
-    if e:
-        dfaStates[frozenset(e)] = f"S{count}"
-        count += 1
-        queue.appendleft(frozenset(e))
+    count = 1
 
     while queue:
         current = queue.pop()
@@ -95,9 +86,8 @@ def MakeDFA(original, states, terminals, transitions):
         for terminal in dfaTerminals:
             transitionsSet = set()
             for prev in current:
-                state_transitions = transitions.get(prev, {})
-                if terminal in state_transitions:
-                    for nextState in state_transitions[terminal]:
+                if terminal in transitions.get(prev, {}):
+                    for nextState in transitions[prev][terminal]:
                         transitionsSet.update(eTransitions(nextState, transitions))
 
             if transitionsSet:
@@ -108,6 +98,8 @@ def MakeDFA(original, states, terminals, transitions):
                     count += 1
 
                 dfaTransitions[currentState][terminal] = dfaStates[frozenset(transitionsSet)]
+            else:
+                dfaTransitions[currentState][terminal] = ""
 
     result = [['' for _ in range(len(dfaTransitions) + 1)] for _ in range(len(dfaTerminals) + 2)]
 
