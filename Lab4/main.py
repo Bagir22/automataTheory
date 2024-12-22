@@ -56,89 +56,90 @@ def ReadNFA(original):
     return states, terminals, transitions
 
 
-def eTransitions(state, transitions):
-    eTransitions = set()
-    queue = deque([state])
+def GeteTransitions(transitions):
+    eTransitions = {}
+
+    for k, v in transitions.items():
+        eTransitions[k] = [k]
+        if v.get('ε'):
+            eTransitions[k].extend(v['ε'])
+
+    return eTransitions
+
+def MakeDFA(original, states, terminals, transitions):
+    count = 0
+    dfaTransitions = defaultdict(dict)
+    dfaTerminals = [t for t in terminals if t != 'ε']
+    dfaStates = {f"S{count}": [states[0]]}
+    queue = deque([(f"S{count}")])
+    count += 1
+
+    eTransitions = GeteTransitions(transitions)
+    print("E transitions", eTransitions)
 
     while queue:
         current = queue.popleft()
-        eTransitions.add(current)
-        if 'ε' in transitions.get(current, {}):
-            for next_state in transitions[current]['ε']:
-                if next_state not in eTransitions:
-                    queue.append(next_state)
+        currentStates = dfaStates[current]
 
-    return list(eTransitions)
-
-def MakeDFA(original, states, terminals, transitions):
-    dfaTerminals = [t for t in terminals if t != 'ε']
-
-    startСlosure = eTransitions(states[0], transitions)
-    queue = deque([frozenset(startСlosure)])
-
-    dfaStates = {frozenset(startСlosure): f"S0"}
-    dfaTransitions = defaultdict(dict)
-    count = 1
-
-    while queue:
-        current = queue.pop()
-        currentState = dfaStates[frozenset(current)]
+        currentTransitions = []
+        for states in [currentStates]:
+            for state in states:
+                currentTransitions.extend(eTransitions[state])
 
         for terminal in dfaTerminals:
-            transitionsSet = set()
-            for prev in current:
-                if terminal in transitions.get(prev, {}):
-                    for nextState in transitions[prev][terminal]:
-                        transitionsSet.update(eTransitions(nextState, transitions))
+            nextStates = set()
 
-            if transitionsSet:
-                if frozenset(transitionsSet) not in dfaStates:
+            for state in currentTransitions:
+                if terminal in transitions[state]:
+                    nextStates.update(transitions[state][terminal])
+
+            if nextStates:
+                eclosureStates = set()
+                for nextState in nextStates:
+                    eclosureStates.update(eTransitions[nextState])
+
+                existingState = None
+                for dfaState, dfaStateTransitions in dfaStates.items():
+                    if set(dfaStateTransitions) == eclosureStates:
+                        existingState = dfaState
+                        break
+
+                if existingState is None:
                     newState = f"S{count}"
-                    dfaStates[frozenset(transitionsSet)] = newState
-                    queue.appendleft(transitionsSet)
+                    dfaStates[newState] = list(eclosureStates)
+                    queue.append(newState)
                     count += 1
+                    dfaTransitions[current][terminal] = newState
+                else:
+                    dfaTransitions[current][terminal] = existingState
 
-                dfaTransitions[currentState][terminal] = dfaStates[frozenset(transitionsSet)]
-            else:
-                dfaTransitions[currentState][terminal] = ""
+        print("Current ", current, currentStates, currentTransitions)
 
 
     result = [['' for _ in range(len(dfaTransitions) + 1)] for _ in range(len(dfaTerminals) + 2)]
 
-    try:
-        print(dfaTerminals)
-        print(dfaStates)
-        print(dfaTransitions)
+    print()
+    print(dfaStates.items())
+    print(dfaTerminals)
+    print(dfaTransitions)
 
-        for i in range(len(dfaTerminals)):
-            result[i+2][0] = dfaTerminals[i]
+    for i in range(len(dfaTerminals)):
+        result[i + 2][0] = dfaTerminals[i]
 
-        finalStates = dict()
-        for k, v in dfaStates.items():
-            for state in set(k):
-                if state in original[1]:
-                    stateIdx = original[1].index(state)
-                    if original[0][stateIdx] == 'F':
-                        finalStates[v] = "F"
-                else:
-                    for i in range(len(result)):
-                        if i != 1:
-                            result[i].append('')
-                        else:
-                            result[i].append(state)
+    for i, v in enumerate(dfaTransitions.items()):
+        result[1][i + 1] = v[0]
+        for next in v[1].items():
+            for j in range(2, len(result)):
+                if result[j][0] == next[0]:
+                    result[j][i + 1] = next[1]
 
-        for i, v in enumerate(dfaTransitions.items()):
-            result[1][i+1] = v[0]
-            if finalStates.get(v[0]) and finalStates[v[0]] == "F":
-                result[0][i + 1] = "F"
-
-            for next in v[1].items():
-                for j in range(2, len(result)):
-                    if result[j][0] == next[0]:
-                        result[j][i+1] = next[1]
-    except Exception as e:
-        print("Dfa result error, ", e)
-        return result
+    for idx in range(1, len(result[1])):
+        state = result[1][idx]
+        for next in dfaTransitions[state].values():
+            nextStatesInOriginal = dfaStates[next]
+            for nextState in nextStatesInOriginal:
+                if original[0][original[1].index(nextState)] == 'F':
+                    result[0][idx] = 'F'
 
     return result
 
@@ -151,7 +152,7 @@ if __name__ == '__main__':
     states, terminals, transitions = ReadNFA(original)
     print("States\n", states)
     print("Terminals\n",terminals)
-    print("Transitions\n", transitions)
+    print("Transitions\n", transitions, "\n")
     result = MakeDFA(original, states, terminals, transitions)
 
     for i in result:
