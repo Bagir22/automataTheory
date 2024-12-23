@@ -64,9 +64,9 @@ def eTransitions(state, transitions):
         current = queue.popleft()
         eTransitions.add(current)
         if 'ε' in transitions.get(current, {}):
-            for next_state in transitions[current]['ε']:
-                if next_state not in eTransitions:
-                    queue.append(next_state)
+            for nextState in transitions[current]['ε']:
+                if nextState not in eTransitions:
+                    queue.append(nextState)
 
     return list(eTransitions)
 
@@ -107,32 +107,19 @@ def MakeDFA(original, states, terminals, transitions):
     print(dfaStates)
     print(dfaTransitions)
 
-    for i in range(len(dfaTerminals)):
-        result[i+2][0] = dfaTerminals[i]
+    for i in range(0, len(dfaTerminals)):
+        result[i + 2][0] = dfaTerminals[i]
 
-    finalStates = dict()
-    for k, v in dfaStates.items():
-        for state in set(k):
-            if state in original[1]:
-                stateIdx = original[1].index(state)
-                if original[0][stateIdx] == 'F':
-                    finalStates[v] = "F"
-            else:
-                for i in range(len(result)):
-                    if i != 1:
-                        result[i].append('')
-                    else:
-                        result[i].append(state)
+    for i, v in enumerate(dfaStates.items()):
+        result[1][i + 1] = v[1]
+        for state in v[0]:
+            if original[0][original[1].index(state)] == 'F':
+                result[0][i + 1] = 'F'
 
-    for i, v in enumerate(dfaTransitions.items()):
-        result[1][i+1] = v[0]
-        if finalStates.get(v[0]) and finalStates[v[0]] == "F":
-            result[0][i + 1] = "F"
-
-        for next in v[1].items():
-            for j in range(2, len(result)):
-                if result[j][0] == next[0]:
-                    result[j][i+1] = next[1]
+    for k, v in dfaTransitions.items():
+        for next in v.items():
+            print(k, next, dfaTerminals.index(next[0]))
+            result[dfaTerminals.index(next[0]) + 2][result[1].index(k)] = next[1]
 
     return result
 
