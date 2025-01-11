@@ -1,0 +1,36 @@
+/*abc*/def
+/*ab
+def
+c*/
+
+ab12/*ab
+c*/def
+
+//abcdefghj
+abc//defghj
+
+==
+if
+;,if_<=a + +a
+elif (a == 10 or b = "abc")
+
+
+;
+,
+
+22
+10.5
+-10
+0b1011
+0b120
+123.45e-2
+0xA0F
+
+a = "ABCDEF"
+b = 'ABCDEF'
+c = "AB'CDEF"
+d = "AB'C"DEF"
+
+/* abc
+def
+
