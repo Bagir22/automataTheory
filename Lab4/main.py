@@ -3,10 +3,12 @@ import csv
 from collections import deque
 from collections import defaultdict
 
+
 def WriteToFile(outFile, result):
     with open(outFile, mode='w', newline='') as file:
         writer = csv.writer(file, delimiter=';')
         writer.writerows(result)
+
 
 def GetOriginalMealy(infile):
     f = open(inFile, 'r')
@@ -14,6 +16,8 @@ def GetOriginalMealy(infile):
     lineCount = 0
 
     for line in f:
+        if not line.strip():
+            continue
         splited = line.split(';')
         original.append([0] * len(splited))
         for i in range(len(splited)):
@@ -32,6 +36,7 @@ def GetOriginalMealy(infile):
 
     return original
 
+
 def ReadNFA(original):
     states = []
     terminals = []
@@ -44,14 +49,14 @@ def ReadNFA(original):
         terminals.append(original[i][0])
 
     for stateIdx in range(len(states)):
-        transitions[original[1][stateIdx+1]] = dict()
+        transitions[original[1][stateIdx + 1]] = dict()
         for i in range(2, len(original)):
-            if original[i][stateIdx+1] != '':
-                if ',' in original[i][stateIdx+1]:
-                    nextState = original[i][stateIdx+1].split(',')
+            if stateIdx + 1 < len(original[i]) and original[i][stateIdx + 1] != '':
+                if ',' in original[i][stateIdx + 1]:
+                    nextState = original[i][stateIdx + 1].split(',')
                 else:
-                    nextState = [original[i][stateIdx+1]]
-                transitions[original[1][stateIdx+1]][original[i][0]] = nextState
+                    nextState = [original[i][stateIdx + 1]]
+                transitions[original[1][stateIdx + 1]][original[i][0]] = nextState
 
     return states, terminals, transitions
 
@@ -70,8 +75,11 @@ def eTransitions(state, transitions):
 
     return list(eTransitions)
 
+
 def MakeDFA(original, states, terminals, transitions):
-    dfaTerminals = [t for t in terminals if t != 'ε']
+    dfaTerminals = []
+
+    dfaTerminals = [t for t in terminals if t != 'ε' and t not in dfaTerminals]
 
     start_closure = eTransitions(states[0], transitions)
     queue = deque([frozenset(start_closure)])
@@ -114,20 +122,15 @@ def MakeDFA(original, states, terminals, transitions):
         result[i + 2][0] = dfaTerminals[i]
 
     for i, v in enumerate(dfaStates.items()):
-        print(i, v)
+        #print(i, v)
         result[1][i + 1] = v[1]
         for state in v[0]:
             if original[0][original[1].index(state)] == 'F':
                 result[0][i + 1] = 'F'
-        '''if len(dfaTerminals) != 0:
-            
-        else:
-            result[0][i] = 'F'
-            result[1][i] = list(dfaStates.items())[0][1]'''
 
     for k, v in dfaTransitions.items():
         for next in v.items():
-            print(k, next, dfaTerminals.index(next[0]))
+            #print(k, next, dfaTerminals.index(next[0]))
             result[dfaTerminals.index(next[0]) + 2][result[1].index(k)] = next[1]
 
     return result
@@ -140,7 +143,7 @@ if __name__ == '__main__':
     original = GetOriginalMealy(inFile)
     states, terminals, transitions = ReadNFA(original)
     print("States\n", states)
-    print("Terminals\n",terminals)
+    print("Terminals\n", terminals)
     print("Transitions\n", transitions)
     result = MakeDFA(original, states, terminals, transitions)
 
