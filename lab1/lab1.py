@@ -107,11 +107,15 @@ def mooreToMealy(inFile, outFile):
         splited[-1] = splited[-1].strip('\n').strip('\t')
         matrix.append(splited)
 
+    for i in matrix:
+        print(i)
+
     for i in range(2, len(matrix)):
         for j in range(1, len(matrix[i])):
             currState = matrix[i][j]
             stateNum = re.sub('\D','', currState)
-            exit = matrix[0][int(stateNum)+1]
+            #print("Curr state, ", currState, stateNum)
+            exit = matrix[0][matrix[1].index(currState)]
             matrix[i][j] = currState + "/" + exit
 
     matrix.pop(0)
