@@ -1,11 +1,13 @@
-import re
 import sys
-
-singleComment = "//"
-multiCommentStart = "/*"
-multiCommentEnd = "*/"
+import re
+import os
 
 multilineCommentMode = False
+
+identificatorLen = 20
+
+maxInt = 2 ** 31 - 1
+minInt = -2 ** 31
 
 operators = {
     "==": "Relational operation",
@@ -22,13 +24,16 @@ operators = {
 }
 
 separators = {
-    "(": "Parenthesis separator",
-    ")": "Parenthesis separator",
+    "(": "Parenthesis bracket",
+    ")": "Parenthesis bracket",
     "[": "Square bracket",
     "]": "Square bracket",
+    "{": "Curly bracket",
+    "}": "Curly bracket",
     ":": "Colon separator",
     ",": "Comma separator",
     ";": "Semicolon separator",
+    ".": "Dot",
 }
 
 keywords = {
@@ -54,143 +59,229 @@ keywords = {
     "with": "Keyword",
     "bool": "Keyword",
     "int": "Keyword",
-    "True": "Keyword",
-    "False": "Keyword",
+    "char": "Keyword",
+    "string": "Keyword",
+    "str": "Keyword",
+    "true": "Keyword",
+    "false": "Keyword",
     "double": "Keyword",
 }
 
 nums = {
-    r'\b\d+[eE][-+]?\d+\b': "Exponential number",
-    r'\b\d+\.\d+\b': "Float number",
-    r'\b\d+\b': "Integer number",
-    r'\b0b[01]+\b': "Binary number",
-    r'\b0x[0-9a-fA-F]+\b': "Hexadecimal number"
+    r'\d*\.?\d+[eE][-+]?\d+\b': "Exponential number",
+    r'\d*\.\d+([eE][-+]?\d+)?\b': "Float number",
+    r'0[0-7]+\b': "Octal number",
+    r'\d+\b': "Integer number",
+    r'0b[01]+\b': "Binary number",
+    r'0x[0-9a-fA-F]+\b': "Hexadecimal number",
 }
+
+
+class Token:
+    def __init__(self, item, key, line, position):
+        self.item = item
+        self.key = key
+        self.line = line
+        self.position = position
+
 
 def isString(item):
     return (len(item) > 1 and
             (item.startswith("\"") and item.endswith("\"") and item.count("\"") % 2 == 0) or
-             (item.startswith("\'") and item.endswith("\'") and item.count("\'") % 2 == 0))
-def makeToken(item, lineIdx, position, outFile):
-    global multilineCommentMode
+            (item.startswith("\'") and item.endswith("\'") and item.count("\'") % 2 == 0))
 
-    if not item:
-        return
+def processString(input_string):
+    return input_string.replace("\n", "\\n")
 
-    if multilineCommentMode:  # Если включен режим многострочного комментария
-        commentIdx = item.find(multiCommentEnd)
-        if commentIdx != -1:  # Найден конец
-            multilineCommentMode = False
-            outFile.write(f"Multiline Comment Close: {item[:commentIdx + 2]} line:{lineIdx} position:{position + commentIdx}\n")
-            makeToken(item[commentIdx + 2:], lineIdx, position + commentIdx + 2, outFile)
-            return
-        else:  # продолжается
-            outFile.write(f"{item} line:{lineIdx} position:{position}\n")
-            return
-    else:
-        commentIdx = item.find(multiCommentStart)
-        if commentIdx != -1:  # Найдено начало
-            makeToken(item[:commentIdx], lineIdx, position, outFile)
-            multilineCommentMode = True
-            endCommentIdx = item.find(multiCommentEnd, commentIdx + 2)
-            if endCommentIdx != -1:  # Найден конец в той же строчке
-                multilineCommentMode = False
-                outFile.write(f"Multiline Comment Start And Close: {item[commentIdx:endCommentIdx + 2]} line:{lineIdx} position:{position + endCommentIdx}\n")
-                makeToken(item[endCommentIdx + 2:], lineIdx, position + endCommentIdx + 2, outFile)
-                return
-            else: # Не найден конец в той же строчке
-                outFile.write(f"Multiline Comment Start: {item[commentIdx:]} line:{lineIdx} position:{position + commentIdx}\n")
-            return
+def isValidIdentificator(item):
+    if not (item[0].isalpha() or (item[0] == "_" and len(item) > 1)):
+        return False
 
-    commentIdx = item.find(singleComment)
-    if commentIdx != -1:
-        prev = item[:commentIdx]
-        makeToken(prev, lineIdx, position, outFile)
-        outFile.write(f"Single Comment: {item[commentIdx:]} line:{lineIdx} position:{commentIdx+1}\n")
-        return
+    if len(item) > identificatorLen:
+        return False
 
-    for key, value in nums.items():
-        match = re.search(key, item)
-        if match:
-            outFile.write(f"{value}: {item} line:{lineIdx} position:{position}\n")
-            return
+    if not all(c.isdigit() or c == "_" or 'a' <= c <= 'z' or 'A' <= c <= 'Z' for c in item):
+        return False
 
-    for k, v in operators.items():
-        idx = item.find(k)
-        if idx != -1:
-            prev = item[:idx]
-            next = item[idx++len(k):]
-            makeToken(prev, lineIdx, position, outFile)
-            outFile.write(f"{v}: {k} line:{lineIdx} position:{position + len(prev)}\n")
-            makeToken(next, lineIdx, position + len(k), outFile)
-            return
+    return True
 
-    for k, v in separators.items():
-        idx = item.find(k)
-        if idx != -1:
-            prev = item[:idx]
-            next = item[idx++len(k):]
-            makeToken(prev, lineIdx, position, outFile)
-            outFile.write(f"{v}: {k} line:{lineIdx} position:{position + len(prev)}\n")
-            makeToken(next, lineIdx, position + len(k), outFile)
-            return
 
-    for k, v in keywords.items():
-        pattern = r'\b' + re.escape(k) + r'\b'
-        match = re.search(pattern, item)
-        if match:
-            idx = match.start()
-            prev = item[:idx]
-            next = item[idx + len(k):]
-            makeToken(prev, lineIdx, position, outFile)
-            outFile.write(f"{v}: {k} line:{lineIdx} position:{position + len(prev)}\n")
-            makeToken(next, lineIdx, position + len(prev) + len(k), outFile)
-            return
+def readDigit(line):
+    item = ""
+    for char in line:
+        if item == "." and not char.isdigit():
+            return item
 
-    curr = ""
-    validIdentificator = item[0].isalpha() or item[0] == "_"
-
-    for i, ch in enumerate(item):
-        if validIdentificator:
-            if ch.isalnum() or ch == '_':
-                curr += ch
-            else:
-                validIdentificator = False
+        if char != " ":
+            item += char
         else:
             break
 
+    return item
 
-    if validIdentificator:
-        outFile.write(f"Identificator: {curr} line:{lineIdx} position:{position}\n")
-    elif isString(item):
-        outFile.write(f"String: {item} line:{lineIdx} position:{position}\n")
-    else:
-        outFile.write(f"Error: {item} line:{lineIdx} position:{position}\n")
+def readString(lines, lineIdx, position):
+    quote_char = lines[lineIdx][position]
+    item = quote_char
+    position += 1
 
-    return
+    while lineIdx < len(lines):
+        line = lines[lineIdx]
+        for char in line[position:]:
+            item += char
+            position += 1
 
-def processLine(line, lineIdx, outFile):
-    position = 1
-    for item in line.split():
-        makeToken(item, lineIdx, position, outFile)
-        position += len(item) + 1
+            if char == quote_char:
+                return item, lineIdx
 
-    return
+        if position >= len(line):
+            item += '\n'
+            lineIdx += 1
+            position = 0
+
+
+    if lineIdx >= len(lines):
+        item = item[:-1]
+    return item, lineIdx
+
+
+def readIdentifier(line):
+    item = ""
+    for char in line:
+        if char.isalnum() or char == "_":
+            item += char
+        else:
+            break
+    return item
+
+
+def readOperator(line):
+    for op in sorted(operators.keys(), key=len, reverse=True):
+        if line.startswith(op):
+            return op
+    return None
+
+
+def makeToken(line, lineIdx, position):
+    global multilineCommentMode
+    global multiStringMode
+    item = ""
+
+    for i, char in enumerate(line):
+        if multilineCommentMode:
+            if char == "*" and i + 1 < len(line) and line[i + 1] == "/":
+                multilineCommentMode = False
+                return Token("*/", "MultiComment End", lineIdx, position + i)
+            else:
+                return None
+        else:
+            if char == "/":
+                if i + 1 < len(line):
+                    next_char = line[i + 1]
+                    if next_char == "/":
+                        return Token(line[i:], "Single Comment", lineIdx, position + i)
+                    elif next_char == "*":
+                        multilineCommentMode = True
+                        return Token("/*", "MultiComment Start", lineIdx, position + i)
+
+            elif char.isdigit() or char == ".":
+                item = readDigit(line[i:])
+                matched = False
+                for key, value in nums.items():
+                    if re.fullmatch(key, item):
+                        matched = True
+                        if value == "Integer number":
+                            num = int(item)
+                            if num < minInt or num > maxInt:
+                                return Token(item, "Error", lineIdx, position + i)
+                        return Token(item, value, lineIdx, position + i)
+                if not matched:
+                    if item == ".":
+                        return Token(char, separators[item], lineIdx, position + i)
+                    return Token(item, "Error", lineIdx, position + i)
+
+            elif char in ["'", '"']:
+                item = readString(line[i:])
+                if isString(item):
+                    return Token(item, "String", lineIdx, position + i)
+                return Token(item, "Error", lineIdx, position + i)
+
+            elif char.isalpha() or char == "_":
+                item = readIdentifier(line[i:])
+                if item in keywords:
+                    return Token(item, "Keyword", lineIdx, position + i)
+                if isValidIdentificator(item):
+                    return Token(item, "Identificator", lineIdx, position + i)
+                return Token(item, "Error", lineIdx, position + i)
+
+            elif char in separators:
+                return Token(char, separators[char], lineIdx, position + i)
+
+            elif char in operators or char == "!":
+                item = readOperator(line[i:])
+                if item:
+                    return Token(item, operators.get(item, "Error"), lineIdx, position + i)
+
+    return Token(item, "Error", lineIdx, position)
+
+
+def parseLine(lines, line, lineIdx, outFile, position):
+    position = position + 0
+    global multilineCommentMode
+    while position < len(line):
+        char = line[position]
+        if char != " ":
+            startLineIdx = lineIdx
+            startPosition = position
+            if char == "'" or char == '"' and not multilineCommentMode:
+                item, lineIdx = readString(lines, lineIdx, position)
+                if isString(item):
+                    token = Token(processString(item), "String", lineIdx, position)
+                else:
+                    token = Token(processString(item), "Error", lineIdx, position)
+            else:
+                token = makeToken(line[position:], lineIdx, position)
+
+            if token is not None:
+                if token.key == "Error" or token.key == "String":
+                    outFile.write(f"{token.key}: {token.item} [{startLineIdx+1}, {startPosition}]\n")
+                elif token.item != "/*" and token.item != "*/" and token.key != "Single Comment":
+                    outFile.write(f"{token.key}: {token.item} [{token.line+1}, {token.position}]\n")
+
+                position += len(token.item)
+
+                if token.key == "String" and token.item.rfind('\\n') != -1:
+                    position = len(token.item) - token.item.rfind('\\n') - 2
+                    parseLine(lines, lines[lineIdx], lineIdx, outFile, position)
+
+            else:
+                position += 1
+        else:
+            position += 1
+
+    return lineIdx
+
 def lexer(inputFile, outputFile):
     global multilineCommentMode
 
-    inFile = open(inputFile, "r")
+    with open(inputFile, "r") as inFile:
+        lines = [line.rstrip('\n') for line in inFile]
+
     outFile = open(outputFile, "w")
+    if os.stat(inputFile).st_size == 0:
+        outFile.write(f"Input file is empty\n")
+        return
 
     lineIdx = 1
-    for line in inFile:
-        processLine(line.strip(), lineIdx, outFile)
-        lineIdx += 1
+    for i in range(0, len(lines)):
+        if lineIdx < len(lines):
+            lineIdx = parseLine(lines, lines[lineIdx].rstrip('\n'), lineIdx, outFile, 0)
+            lineIdx += 1
 
     if multilineCommentMode:
-        outFile.write(f"Error closing multiline comment\n")
+        outFile.write(f"Error: non closed multiline comment\n")
 
     return
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
